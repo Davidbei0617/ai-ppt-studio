@@ -1,3 +1,5 @@
+import {readDraftFile} from './imports.js';
+import {renderSlidePreview,createSlideshow} from './presentation.js';
 import {exportPresentation,friendlyExportError} from './export.js';
 import {askConfirmation} from './confirmation.js';
 import {generateDeck,rewriteSlide,friendlyError,compareRewrite} from './ai.js';
@@ -47,11 +49,7 @@ function renderTrash(){
  }));
 }
 function renderPreview(){
- const page=deck.slides[active],layout=slideLayout(page);$('deck-title').textContent=deck.title;
- $('slide').className='slide '+deck.theme+' layout-'+layout;
- $('slide-kicker').textContent=LAYOUTS[layout]+' / '+String(active+1).padStart(2,'0');$('preview-title').textContent=page.title||'未命名页面';
- const list=$('preview-bullets');list.replaceChildren(...page.bullets.filter(Boolean).map((text,i)=>{const li=document.createElement('li');if(layout==='process'||layout==='summary'){const n=document.createElement('span');n.className='step-number';n.textContent=String(i+1).padStart(2,'0');li.append(n);}const t=document.createElement('span');t.textContent=text;li.append(t);return li;}));
- $('preview-audience').textContent=deck.audience||'面向所有听众';$('preview-page').textContent=`${active+1} / ${deck.slides.length}`;$('page-counter').textContent=`第 ${active+1} / ${deck.slides.length} 页`;
+ $('deck-title').textContent=deck.title;renderSlidePreview($('slide'),deck,active);$('page-counter').textContent=`第 ${active+1} / ${deck.slides.length} 页`;
 }
 function renderThumbnails(){
  $('thumbnails').replaceChildren(...deck.slides.map((s,i)=>{const b=document.createElement('button');b.className='thumb';b.disabled=busy;b.setAttribute('aria-current',String(i===active));b.setAttribute('aria-label',`第 ${i+1} 页：${s.title}`);const n=document.createElement('small');n.textContent=`${i+1} · ${LAYOUTS[slideLayout(s)]}`;const t=document.createElement('strong');t.textContent=s.title||'未命名页面';b.append(n,t);b.onclick=()=>{if(busy)return;active=i;proposal=null;render();};return b;}));
@@ -121,12 +119,14 @@ function move(delta){const to=active+delta;if(to>=0&&to<deck.slides.length)chang
 $('move-left').onclick=()=>move(-1);$('move-right').onclick=()=>move(1);
 for(const button of document.querySelectorAll('[data-rewrite]'))button.onclick=async()=>{
  if(busy||!anna)return;
- if(!await confirmAction('仅改写当前页，使用少量 Anna 额度。结果先预览，确认采用后才替换原页。',{title:button.textContent,action:'开始改写'}))return;
+ const instruction=button.dataset.rewrite==='custom'?$('custom-instruction').value.trim():undefined;
+ if(button.dataset.rewrite==='custom'&&(!instruction||instruction.length>500)){$('rewrite-status').textContent='请先填写 1–500 字的修改要求。';$('custom-instruction').focus();return;}
+ if(!await confirmAction('仅改写当前页，使用少量 Anna 额度。结果先预览，确认采用后才替换原页。',{title:button.querySelector('strong')?.textContent||button.textContent,action:'开始改写'}))return;
  run(async()=>{
   $('rewrite-status').textContent='正在改写当前页…';proposal=null;renderProposal();
   const original=JSON.stringify(deck.slides[active]);
   let page;
-  try{page=await rewriteSlide(anna,{slide:structuredClone(deck.slides[active]),topic:deck.topic||deck.title,audience:deck.audience,action:button.dataset.rewrite});}
+  try{page=await rewriteSlide(anna,{slide:structuredClone(deck.slides[active]),topic:deck.topic||deck.title,audience:deck.audience,action:button.dataset.rewrite,instruction});}
   catch(error){$('rewrite-status').textContent='改写失败：'+friendlyError(error);throw error;}
   const diff=compareRewrite(JSON.parse(original),page);
   if(!diff.changed){$('rewrite-status').textContent='AI 返回的内容与原页相同，没有产生修改。原页已保留，本次请求可能已消耗额度，不会自动重试。';return;}
@@ -172,7 +172,7 @@ function setCreateOpen(value){
  if(value){createReturnFocus=document.activeElement;$('topic').focus();}
  else if(!busy){createReturnFocus?.focus();createReturnFocus=null;}
 }
-function updateWorkspaceInert(){const value=!$('create-overlay').hidden||!$('trash-overlay').hidden;$('app-header').inert=value;$('app-workspace').inert=value;}
+function updateWorkspaceInert(){const value=!$('create-overlay').hidden||!$('trash-overlay').hidden||!$('slideshow-overlay').hidden;$('app-header').inert=value;$('app-workspace').inert=value;}
 function setTrashOpen(value){
  const overlay=$('trash-overlay');if(value===!overlay.hidden)return;
  if(value)trashReturnFocus=document.activeElement;
@@ -196,4 +196,11 @@ $('create-overlay').addEventListener('keydown',e=>{
  if(e.key==='Tab'){const controls=[...$('create-overlay').querySelectorAll('button,input,textarea,select')].filter(el=>!el.disabled);if(!controls.length)return;const first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
 });
 selectPanel('content');
+$('import-project').onclick=()=>{if(!busy&&!confirming)$('import-file').click();};
+$('import-file').onchange=()=>{
+ const file=$('import-file').files?.[0];$('import-file').value='';if(!file||busy||confirming)return;
+ run(async()=>{try{$('import-status').textContent='正在校验草稿…';const imported=await readDraftFile(file);await newProject(imported);$('import-status').textContent=`已导入 ${imported.slides.length} 页，原项目已保留。`;toast('草稿已导入为独立项目。');}catch(error){$('import-status').textContent='导入失败：'+friendlyError(error);throw error;}});
+};
+const player=createSlideshow({overlay:$('slideshow-overlay'),stage:$('slideshow-stage'),template:$('slide'),previous:$('slideshow-prev'),next:$('slideshow-next'),counter:$('slideshow-counter'),close:$('slideshow-exit'),fullscreen:$('slideshow-fullscreen'),hint:$('slideshow-hint'),onOpen:updateWorkspaceInert,onExit:index=>{active=index;proposal=null;updateWorkspaceInert();render();}});
+$('start-slideshow').onclick=()=>{if(!busy&&!confirming)player.open(deck,active);};
 boot();

@@ -29,7 +29,10 @@
       }
     ],
     "csp_overrides": {},
-    "state_merge": "last_writer_wins"
+    "state_merge": "last_writer_wins",
+    "browser_permissions": [
+      "fullscreen"
+    ]
   },
   "dev": {
     "fixtures": [

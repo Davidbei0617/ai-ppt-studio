@@ -3,8 +3,8 @@ import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const original={title:'考前冲刺与心态调整',layout:'process',bullets:['考前3天：回归基础，不再钻研偏题怪题','考前1天：浏览错题本与核心公式清单'],notes:'原演讲备注'};
 const deck={schema:1,title:'备考指南',theme:'paper',audience:'大学生',slides:[structuredClone(original),{title:'另一页',layout:'summary',bullets:['保持正常作息'],notes:''}]};
-const values=new Map([['decks/current',{value:deck,etag:'old'}]]);let calls=0,nextPage;
-globalThis.__rewriteTestAnna={storage:{get:async({key})=>values.has(key)?{exists:true,...structuredClone(values.get(key))}:{exists:false,value:null},set:async({key,value,if_match})=>{if(if_match)assert.equal(if_match,values.get(key)?.etag);const result={etag:crypto.randomUUID()};values.set(key,{value:structuredClone(value),...result});return result;}},llm:{complete:async()=>{calls++;return {stopReason:'endTurn',content:{text:JSON.stringify(nextPage)}};}}};
+const values=new Map([['decks/current',{value:deck,etag:'old'}]]);let calls=0,nextPage,lastRequest;
+globalThis.__rewriteTestAnna={storage:{get:async({key})=>values.has(key)?{exists:true,...structuredClone(values.get(key))}:{exists:false,value:null},set:async({key,value,if_match})=>{if(if_match)assert.equal(if_match,values.get(key)?.etag);const result={etag:crypto.randomUUID()};values.set(key,{value:structuredClone(value),...result});return result;}},llm:{complete:async request=>{lastRequest=request;calls++;return {stopReason:'endTurn',content:{text:JSON.stringify(nextPage)}};}}};
 const win=new Window({url:'http://localhost:5181/app?wid=mock-window',settings:{disableJavaScriptFileLoading:true,disableCSSFileLoading:true}});
 win.document.write((await readFile('bundle/index.html','utf8')).replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,'').replace(/<link\b[^>]*>/g,''));
 Object.assign(globalThis,{window:win,document:win.document,location:win.location,localStorage:win.localStorage});
@@ -23,5 +23,13 @@ let saved=[...values.entries()].find(([k])=>k.startsWith('projects/')&&k!=='proj
 $('undo').click();$('save-now').click();await tick();assert.equal($('preview-title').textContent,original.title);
 await request(original);assert.equal(calls,2);assert.equal($('rewrite-review').hidden,true);assert.match($('rewrite-status').textContent,/没有产生修改/);
 await request({...original,notes:'仅备注更新'});assert.equal(calls,3);assert.equal($('rewrite-review').hidden,false);assert.match($('rewrite-candidate-label').textContent,/仅演讲备注/);$('reject-rewrite').click();assert.equal($('preview-title').textContent,original.title);
+// Custom instruction validation must prevent an empty paid request.
+$('custom-instruction').value='';$('custom-rewrite').click();await tick();assert.equal(calls,3);assert.match($('rewrite-status').textContent,/修改要求/);
+const instruction='改成面向客户的专业表达，保留原有时间节点。';$('custom-instruction').value=instruction;
+nextPage={...original,title:'客户沟通安排',bullets:['提前3天核对方案','提前1天确认沟通重点']};
+$('custom-rewrite').click();await tick();document.querySelector('.confirm-accept').click();await tick();
+assert.equal(calls,4);assert.equal(JSON.parse(lastRequest.messages[0].content.text).instruction,instruction);assert.equal(lastRequest.maxTokens,1000);assert.equal($('preview-title').textContent,original.title);
+$('accept-rewrite').click();await tick();assert.equal($('preview-title').textContent,'客户沟通安排');assert.match($('rewrite-status').textContent,/并保存/);
+console.log('自定义改写的空输入保护、要求传递、候选预览与采用保存流程通过。');
 console.log('Anna 接口模拟的完整改写流程通过：真实按钮触发、候选不覆盖、采用后保存、其他页不变、撤销、无变化识别与仅备注提示。');
 $('save-now').click();await tick();await win.happyDOM.close();

@@ -12,7 +12,7 @@
     "validate": "anna-app validate --strict",
     "preview": "node scripts/preview.cjs",
     "dev:anna": "node scripts/dev.cjs",
-    "test": "node tests/ai.test.mjs && node tests/confirmation.test.mjs && node tests/export.test.mjs && node tests/projects.test.mjs && node tests/rewrite.test.mjs && node tests/layouts.test.mjs && node tests/workspace.test.mjs && node tests/rewrite-workflow.test.mjs",
+    "test": "node tests/ai.test.mjs && node tests/confirmation.test.mjs && node tests/export.test.mjs && node tests/projects.test.mjs && node tests/rewrite.test.mjs && node tests/layouts.test.mjs && node tests/workspace.test.mjs && node tests/rewrite-workflow.test.mjs && node tests/imports.test.mjs && node tests/presentation.test.mjs",
     "build": "node scripts/sync-vendor.cjs"
   },
   "dependencies": {

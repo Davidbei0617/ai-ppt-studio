@@ -7,3 +7,6 @@ assert.equal(calls,1);assert.equal(page.layout,'process');assert.equal(original.
 await assert.rejects(rewriteSlide({llm:{complete:async()=>({stopReason:'maxTokens'})}},{slide:original,topic:'主题',audience:'学生',action:'shorten'}),/截断/);
 await assert.rejects(rewriteSlide({}, {slide:original,action:'invalid'}),/有效/);
 console.log('单页改写保持原页、保留版式、单次限额调用及截断保护检查通过。');
+
+await assert.rejects(rewriteSlide({}, {slide:original,action:'custom',instruction:''}),/修改要求/);
+await assert.rejects(rewriteSlide({}, {slide:original,action:'custom',instruction:'长'.repeat(501)}),/修改要求/);
