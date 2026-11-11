@@ -19,12 +19,12 @@
       <button id="open-create" class="create-button"><span aria-hidden="true">＋</span> 新建演示</button>
       <div class="section-label"><label for="project-select">我的项目</label><span id="project-count"></span></div>
       <select id="project-select" aria-label="切换项目"></select>
-      <details class="project-menu"><summary>项目管理 <span aria-hidden="true">⌄</span></summary><div class="project-menu-content"><button id="clone-project">复制当前项目</button><button id="backup">下载 JSON 备份</button><button id="save-now">立即保存 / 重试保存</button><button id="archive-project" class="danger-text">将当前项目移入回收站</button><label class="trash-toggle"><input type="checkbox" id="show-trash"> 查看回收站</label><button id="restore-project" hidden>恢复所选项目</button><p class="microcopy">勾选回收站后，在上方列表选择要恢复的项目。</p></div></details>
+      <details class="project-menu"><summary>项目管理 <span aria-hidden="true">⌄</span></summary><div class="project-menu-content"><button id="clone-project">复制当前项目</button><button id="backup">下载 JSON 备份</button><button id="save-now">立即保存 / 重试保存</button><button id="archive-project" class="danger-text">将当前项目移入回收站</button></div></details>
     </div>
     <div class="slides-heading"><h2>幻灯片</h2><span class="microcopy">点击页面开始编辑</span></div>
     <nav id="thumbnails" class="thumbnails" aria-label="幻灯片列表"></nav>
     <button id="add" class="add-button">＋ 添加幻灯片</button>
-    <div class="sidebar-footer">每个项目独立保存</div>
+    <button id="open-trash" class="trash-entry"><span>回收站</span><span id="trash-count" class="trash-count">0</span></button><div class="sidebar-footer">每个项目独立保存</div>
   </aside>
   <section class="editor" aria-label="演示预览">
     <div class="editor-heading"><div><span class="eyebrow">演示工作台</span><h1 id="deck-title"></h1></div><span class="canvas-format">16:9</span></div>
@@ -43,6 +43,7 @@
   </aside>
 </main>
 <div id="create-overlay" class="create-overlay" hidden><section class="create-dialog" role="dialog" aria-modal="true" aria-labelledby="create-title"><div class="dialog-heading"><div><span class="eyebrow">开始一份新演示</span><h2 id="create-title">告诉 AI，你想讲什么</h2></div><button id="close-create" aria-label="关闭新建演示">×</button></div><p class="dialog-description">输入主题和受众，生成内容与版式。现有项目会保留。</p><form id="brief-form"><label for="topic">演示主题 <span class="required">*</span></label><textarea id="topic" rows="3" maxlength="100" required placeholder="例如：大学生如何高效准备期末考试">让团队更高效地使用 AI</textarea><label for="audience">你的听众是谁？</label><input id="audience" maxlength="60" placeholder="例如：团队成员、大学生、客户" value="团队成员"><div class="form-row"><div><label for="count">生成页数</label><select id="count"><option>4</option><option selected>6</option><option>8</option></select></div><div><label for="new-theme">视觉主题</label><select id="new-theme"><option value="ink">午夜蓝</option><option value="paper">暖纸白</option><option value="forest">森林绿</option></select></div></div><button class="primary-button generate-button" id="generate" type="submit" disabled>AI 生成整份演示</button><p id="generation-status" class="inline-status" role="status" aria-live="polite"></p><p class="hint">生成使用 Anna 额度。失败时保留原项目，不自动重试。</p></form><div class="other-start"><span>也可以</span><button id="new-project">创建空白演示</button><button id="demo">试用免费示例</button></div></section></div>
+<div id="trash-overlay" class="create-overlay" hidden><section class="trash-dialog" role="dialog" aria-modal="true" aria-labelledby="trash-title" aria-describedby="trash-description"><div class="dialog-heading"><div><span class="eyebrow">项目管理</span><h2 id="trash-title">回收站 <span id="trash-total"></span></h2></div><button id="close-trash" aria-label="关闭回收站">×</button></div><p id="trash-description" class="dialog-description">恢复后的项目会回到“我的项目”，不会切换当前正在编辑的演示。</p><div id="trash-list" class="trash-list" aria-label="已删除项目"></div><div id="trash-empty" class="trash-empty" hidden><span class="trash-empty-icon" aria-hidden="true">↺</span><h3>回收站是空的</h3><p>移入回收站的项目会显示在这里，随时可以恢复。</p></div><div class="trash-footer"><span>项目内容会保留，恢复时无需重新生成。</span><button id="done-trash">返回编辑</button></div></section></div>
 <div id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

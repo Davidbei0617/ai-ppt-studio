@@ -9,7 +9,7 @@ function createDemo(topic='让团队更高效地使用 AI',audience='团队成�
  return {schema:1,title:topic,topic,audience,theme,slides:Array.from({length:count},(_,i)=>{const row=rows[i===count-1?5:Math.min(i,4)];return {title:i===0?topic:row[0],bullets:[...row[1]],notes:'固定示例，请根据真实情况补充讲述内容。',layout:i===0?'cover':i===count-1?'summary':i===2?'compare':i===3?'process':'content'};})};
 }
 let deck=createDemo();
-let createReturnFocus=null;
+let createReturnFocus=null,trashReturnFocus=null;
 function toast(text){$('toast').textContent=text;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast')?.classList.remove('visible'),4000);}
 async function confirmAction(message,options){if(confirming)return false;confirming=true;try{return await askConfirmation(message,options);}finally{confirming=false;}}
 function markDirty(){dirty=true;editVersion++;$('save-status').textContent='正在保存…';clearTimeout(saveTimer);saveTimer=setTimeout(()=>persist().catch(()=>{}),600);}
@@ -21,12 +21,30 @@ async function persist(){
  catch(e){$('save-status').textContent='保存失败：'+friendlyError(e);throw e;}
 }
 function renderProjects(){
- if(!store)return;const selected=$('project-select').value;const trash=$('show-trash').checked;
- const items=store.index.items.filter(i=>!!i.deleted===trash).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+ if(!store)return;
+ const items=store.index.items.filter(i=>!i.deleted).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
  $('project-select').replaceChildren(...items.map(item=>{const opt=document.createElement('option');opt.value=item.id;opt.textContent=`${item.title} · ${item.pages} 页`;return opt;}));
- if(!trash)$('project-select').value=projectId;else if(items.some(i=>i.id===selected))$('project-select').value=selected;
- $('project-count').textContent=trash?`回收站 ${items.length} 项`:`${items.length} 个项目`;
- $('restore-project').hidden=!trash;$('project-select').disabled=busy||!items.length;
+ $('project-select').value=projectId;
+ $('project-count').textContent=`${items.length} 个项目`;
+ $('project-select').disabled=busy||!items.length;
+ $('trash-count').textContent=String(store.index.items.filter(i=>i.deleted).length);
+ if(!$('trash-overlay').hidden)renderTrash();
+}
+function renderTrash(){
+ if(!store)return;
+ const items=store.index.items.filter(i=>i.deleted).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+ $('trash-total').textContent=`${items.length} 项`;
+ $('trash-empty').hidden=items.length>0;
+ $('trash-list').replaceChildren(...items.map(item=>{
+  const row=document.createElement('article');row.className='trash-item';row.dataset.projectId=item.id;
+  const content=document.createElement('div');content.className='trash-item-content';
+  const title=document.createElement('h3');title.textContent=item.title;
+  const meta=document.createElement('p');const date=new Date(item.updatedAt);meta.textContent=`${item.pages} 页 · 最后编辑 ${Number.isNaN(date.getTime())?'日期未知':date.toLocaleDateString('zh-CN')}`;
+  content.append(title,meta);
+  const restore=document.createElement('button');restore.textContent='恢复项目';restore.disabled=busy;restore.setAttribute('aria-label',`恢复项目：${item.title}`);
+  restore.onclick=()=>run(async()=>{await persist();await store.archive(item.id,false);renderProjects();toast(`“${item.title}”已恢复到我的项目。`);});
+  row.append(content,restore);return row;
+ }));
 }
 function renderPreview(){
  const page=deck.slides[active],layout=slideLayout(page);$('deck-title').textContent=deck.title;
@@ -70,12 +88,13 @@ function render(){
 }
 function syncBrief(){$('topic').value=deck.topic||deck.title;$('audience').value=deck.audience;$('theme').value=deck.theme;$('new-theme').value=deck.theme;$('project-name').value=deck.title;}
 function lock(value){busy=value;$('brief-form').setAttribute('aria-busy',String(value));render();}
-async function run(action){if(busy||confirming)return;lock(true);try{await action();}catch(e){toast(friendlyError(e));$('generation-status').textContent=friendlyError(e);}finally{lock(false);if(createReturnFocus&&$('create-overlay').hidden){createReturnFocus.focus();createReturnFocus=null;}}}
+async function run(action){if(busy||confirming)return;lock(true);try{await action();}catch(e){toast(friendlyError(e));$('generation-status').textContent=friendlyError(e);}finally{lock(false);if(createReturnFocus&&$('create-overlay').hidden){createReturnFocus.focus();createReturnFocus=null;}if(!$('trash-overlay').hidden&&!$('trash-overlay').contains(document.activeElement))$('close-trash').focus();}}
 async function openProject(id){await persist();deck=await store.open(id);projectId=id;active=0;proposal=null;undo=null;dirty=false;syncBrief();selectPanel('content');render();$('save-status').textContent='草稿已恢复';}
-async function newProject(value){await persist();const id=await store.create(value);await openProject(id);$('show-trash').checked=false;renderProjects();setCreateOpen(false);}
-$('project-select').onchange=e=>{if($('show-trash').checked)return;const id=e.target.value;run(()=>openProject(id));};
-$('show-trash').onchange=()=>renderProjects();
-$('restore-project').onclick=()=>run(async()=>{const id=$('project-select').value;if(!id)return;await store.archive(id,false);$('show-trash').checked=false;await openProject(id);toast('项目已恢复。');});
+async function newProject(value){await persist();const id=await store.create(value);await openProject(id);renderProjects();setCreateOpen(false);}
+$('project-select').onchange=e=>{const id=e.target.value;run(()=>openProject(id));};
+$('open-trash').onclick=()=>{if(!busy){setTrashOpen(true);renderTrash();}};
+$('close-trash').onclick=$('done-trash').onclick=()=>{if(!busy)setTrashOpen(false);};
+$('trash-overlay').onclick=e=>{if(e.target===$('trash-overlay')&&!busy)setTrashOpen(false);};
 $('new-project').onclick=()=>run(()=>newProject({schema:1,title:'未命名项目',audience:'',theme:$('new-theme').value,slides:[{title:'演示标题',bullets:['在这里写下你的想法'],notes:'',layout:'cover'}]}));
 $('clone-project').onclick=()=>run(async()=>{await newProject({...structuredClone(deck),title:(deck.title+' · 副本').slice(0,100)});toast('已复制项目。');});
 $('archive-project').onclick=async()=>{if(busy)return;if(!await confirmAction('项目将移入回收站，可以恢复。',{title:'移入回收站',action:'移入回收站'}))return;run(async()=>{await persist();await store.archive(projectId);let next=store.index.items.find(i=>!i.deleted);if(!next){const id=await store.create(createDemo());next={id};}await openProject(next.id);toast('项目已移入回收站。');});};
@@ -149,10 +168,25 @@ for(const tab of document.querySelectorAll('[data-panel]')){
 }
 function setCreateOpen(value){
  const overlay=$('create-overlay');if(value===!overlay.hidden)return;
- overlay.hidden=!value;$('app-header').inert=value;$('app-workspace').inert=value;
+ overlay.hidden=!value;updateWorkspaceInert();
  if(value){createReturnFocus=document.activeElement;$('topic').focus();}
  else if(!busy){createReturnFocus?.focus();createReturnFocus=null;}
 }
+function updateWorkspaceInert(){const value=!$('create-overlay').hidden||!$('trash-overlay').hidden;$('app-header').inert=value;$('app-workspace').inert=value;}
+function setTrashOpen(value){
+ const overlay=$('trash-overlay');if(value===!overlay.hidden)return;
+ if(value)trashReturnFocus=document.activeElement;
+ overlay.hidden=!value;updateWorkspaceInert();
+ if(value)$('close-trash').focus();else{trashReturnFocus?.focus();trashReturnFocus=null;}
+}
+$('trash-overlay').addEventListener('keydown',e=>{
+ if(e.key==='Escape'&&!busy){e.preventDefault();setTrashOpen(false);}
+ if(e.key==='Tab'){
+  const controls=[...$('trash-overlay').querySelectorAll('button')].filter(el=>!el.disabled&&!el.closest('[hidden]'));
+  const first=controls[0],last=controls.at(-1);if(!first)return;
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+ }
+});
 $('open-create').onclick=()=>{if(!busy)setCreateOpen(true);};
 $('close-create').onclick=()=>{if(!busy&&!confirming)setCreateOpen(false);};
 $('create-overlay').onclick=e=>{if(e.target===$('create-overlay')&&!busy&&!confirming)setCreateOpen(false);};

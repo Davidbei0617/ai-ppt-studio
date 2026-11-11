@@ -15,7 +15,16 @@ $('project-select').value=originalId;$('project-select').dispatchEvent(new win.E
 $('project-select').value=cloneId;$('project-select').dispatchEvent(new win.Event('change'));await tick();assert.equal($('slide-title').value,'副本专用标题');
 $('layout').value='compare';$('layout').dispatchEvent(new win.Event('change'));assert.match($('slide').className,/layout-compare/);
 $('archive-project').click();await tick();document.querySelector('.confirm-accept').click();await tick();assert.equal($('project-select').options.length,1);
-$('show-trash').checked=true;$('show-trash').dispatchEvent(new win.Event('change'));assert.equal($('project-select').value,cloneId);$('restore-project').click();await tick();assert.equal($('project-select').options.length,2);assert.equal($('project-name').value,'副本改名');
+// Trash is independent of the active project selector and editor.
+const editingId=$('project-select').value,editingTitle=$('preview-title').textContent;
+$('open-trash').focus();$('open-trash').click();assert.equal($('trash-overlay').hidden,false);assert.equal($('app-workspace').inert,true);
+assert.equal($('project-select').value,editingId);assert.equal($('project-select').options.length,1);assert.equal(document.querySelectorAll('.trash-item').length,1);assert.equal(document.querySelector('.trash-item').dataset.projectId,cloneId);
+assert.equal($('project-count').textContent,'1 个项目');assert.equal($('trash-count').textContent,'1');
+document.querySelector('.trash-item button').click();await tick();
+assert.equal($('project-select').options.length,2);assert.equal($('project-select').value,editingId);assert.equal($('preview-title').textContent,editingTitle);assert.equal($('trash-empty').hidden,false);assert.equal(document.querySelectorAll('.trash-item').length,0);assert.equal($('trash-count').textContent,'0');
+$('trash-overlay').dispatchEvent(new win.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal($('trash-overlay').hidden,true);assert.equal($('app-workspace').inert,false);assert.equal(document.activeElement,$('open-trash'));
+$('open-trash').click();assert.equal($('trash-empty').hidden,false);$('done-trash').click();assert.equal($('trash-overlay').hidden,true);
+console.log('回收站独立列表、恢复不切换当前项目、数量、空状态、Esc 与焦点恢复检查通过。');
 $('add').click();const count=document.querySelectorAll('.thumb').length;$('delete').click();assert.equal(document.querySelectorAll('.thumb').length,count-1);$('undo').click();assert.equal(document.querySelectorAll('.thumb').length,count);
 // Navigation regression: only one inspector tool is visible at a time.
 $('tab-design').click();assert.equal($('panel-design').hidden,false);assert.equal($('panel-content').hidden,true);assert.equal($('tab-design').getAttribute('aria-selected'),'true');
