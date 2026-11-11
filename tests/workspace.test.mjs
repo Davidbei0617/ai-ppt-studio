@@ -17,5 +17,16 @@ $('layout').value='compare';$('layout').dispatchEvent(new win.Event('change'));a
 $('archive-project').click();await tick();document.querySelector('.confirm-accept').click();await tick();assert.equal($('project-select').options.length,1);
 $('show-trash').checked=true;$('show-trash').dispatchEvent(new win.Event('change'));assert.equal($('project-select').value,cloneId);$('restore-project').click();await tick();assert.equal($('project-select').options.length,2);assert.equal($('project-name').value,'副本改名');
 $('add').click();const count=document.querySelectorAll('.thumb').length;$('delete').click();assert.equal(document.querySelectorAll('.thumb').length,count-1);$('undo').click();assert.equal(document.querySelectorAll('.thumb').length,count);
+// Navigation regression: only one inspector tool is visible at a time.
+$('tab-design').click();assert.equal($('panel-design').hidden,false);assert.equal($('panel-content').hidden,true);assert.equal($('tab-design').getAttribute('aria-selected'),'true');
+$('tab-design').dispatchEvent(new win.KeyboardEvent('keydown',{key:'ArrowRight'}));assert.equal($('panel-ai').hidden,false);assert.equal(document.activeElement,$('tab-ai'));
+$('tab-content').click();
+const oldTheme=$('slide').className;
+$('open-create').focus();$('open-create').click();assert.equal($('create-overlay').hidden,false);assert.equal($('app-workspace').inert,true);assert.equal(document.activeElement,$('topic'));
+$('new-theme').value='forest';$('new-theme').dispatchEvent(new win.Event('change'));assert.equal($('slide').className,oldTheme);
+$('create-overlay').dispatchEvent(new win.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal($('create-overlay').hidden,true);assert.equal($('app-workspace').inert,false);assert.equal(document.activeElement,$('open-create'));
+const beforeCount=$('project-select').options.length;
+$('open-create').click();$('new-project').click();await tick();assert.equal($('create-overlay').hidden,true);assert.equal($('project-select').options.length,beforeCount+1);assert.equal($('panel-content').hidden,false);
+console.log('新版导航检查通过：标签切换、方向键、创建窗口、Esc 关闭、焦点恢复、新建主题隔离。');
 await tick();console.log('DOM 流程检查通过：复制、改名、独立编辑、切换、版式选择、回收站恢复、增删与撤销。');
 $('save-now').click();await tick();$('save-now').click();await tick();await win.happyDOM.close();

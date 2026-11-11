@@ -9,6 +9,7 @@ function createDemo(topic='让团队更高效地使用 AI',audience='团队成�
  return {schema:1,title:topic,topic,audience,theme,slides:Array.from({length:count},(_,i)=>{const row=rows[i===count-1?5:Math.min(i,4)];return {title:i===0?topic:row[0],bullets:[...row[1]],notes:'固定示例，请根据真实情况补充讲述内容。',layout:i===0?'cover':i===count-1?'summary':i===2?'compare':i===3?'process':'content'};})};
 }
 let deck=createDemo();
+let createReturnFocus=null;
 function toast(text){$('toast').textContent=text;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast')?.classList.remove('visible'),4000);}
 async function confirmAction(message,options){if(confirming)return false;confirming=true;try{return await askConfirmation(message,options);}finally{confirming=false;}}
 function markDirty(){dirty=true;editVersion++;$('save-status').textContent='正在保存…';clearTimeout(saveTimer);saveTimer=setTimeout(()=>persist().catch(()=>{}),600);}
@@ -49,29 +50,30 @@ function render(){
  $('move-left').disabled=busy||active===0;$('move-right').disabled=busy||active===deck.slides.length-1;
  $('delete').disabled=busy||deck.slides.length===1;$('undo').disabled=busy||!undo;
  $('add').disabled=$('duplicate').disabled=busy||deck.slides.length>=30;
- $('generate').textContent=busy?'正在处理…':anna?'用 Anna AI 新建项目':'连接 Anna 后生成';
+ $('generate').textContent=busy?'正在处理…':anna?'AI 生成整份演示':'连接 Anna 后生成';
+ $('work-status').hidden=!busy;
  renderProjects();
 }
-function syncBrief(){$('topic').value=deck.topic||deck.title;$('audience').value=deck.audience;$('theme').value=deck.theme;$('project-name').value=deck.title;}
+function syncBrief(){$('topic').value=deck.topic||deck.title;$('audience').value=deck.audience;$('theme').value=deck.theme;$('new-theme').value=deck.theme;$('project-name').value=deck.title;}
 function lock(value){busy=value;$('brief-form').setAttribute('aria-busy',String(value));render();}
-async function run(action){if(busy||confirming)return;lock(true);try{await action();}catch(e){toast(friendlyError(e));$('generation-status').textContent=friendlyError(e);}finally{lock(false);}}
-async function openProject(id){await persist();deck=await store.open(id);projectId=id;active=0;proposal=null;undo=null;dirty=false;syncBrief();render();$('save-status').textContent='草稿已恢复';}
-async function newProject(value){await persist();const id=await store.create(value);await openProject(id);$('show-trash').checked=false;renderProjects();}
+async function run(action){if(busy||confirming)return;lock(true);try{await action();}catch(e){toast(friendlyError(e));$('generation-status').textContent=friendlyError(e);}finally{lock(false);if(createReturnFocus&&$('create-overlay').hidden){createReturnFocus.focus();createReturnFocus=null;}}}
+async function openProject(id){await persist();deck=await store.open(id);projectId=id;active=0;proposal=null;undo=null;dirty=false;syncBrief();selectPanel('content');render();$('save-status').textContent='草稿已恢复';}
+async function newProject(value){await persist();const id=await store.create(value);await openProject(id);$('show-trash').checked=false;renderProjects();setCreateOpen(false);}
 $('project-select').onchange=e=>{if($('show-trash').checked)return;const id=e.target.value;run(()=>openProject(id));};
 $('show-trash').onchange=()=>renderProjects();
 $('restore-project').onclick=()=>run(async()=>{const id=$('project-select').value;if(!id)return;await store.archive(id,false);$('show-trash').checked=false;await openProject(id);toast('项目已恢复。');});
-$('new-project').onclick=()=>run(()=>newProject({schema:1,title:'未命名项目',audience:'',theme:deck.theme,slides:[{title:'演示标题',bullets:['在这里写下你的想法'],notes:'',layout:'cover'}]}));
+$('new-project').onclick=()=>run(()=>newProject({schema:1,title:'未命名项目',audience:'',theme:$('new-theme').value,slides:[{title:'演示标题',bullets:['在这里写下你的想法'],notes:'',layout:'cover'}]}));
 $('clone-project').onclick=()=>run(async()=>{await newProject({...structuredClone(deck),title:(deck.title+' · 副本').slice(0,100)});toast('已复制项目。');});
 $('archive-project').onclick=async()=>{if(busy)return;if(!await confirmAction('项目将移入回收站，可以恢复。',{title:'移入回收站',action:'移入回收站'}))return;run(async()=>{await persist();await store.archive(projectId);let next=store.index.items.find(i=>!i.deleted);if(!next){const id=await store.create(createDemo());next={id};}await openProject(next.id);toast('项目已移入回收站。');});};
 $('project-name').onchange=()=>{const value=$('project-name').value.trim();if(!value){$('project-name').value=deck.title;return;}deck.title=value;renderPreview();markDirty();};
 $('save-now').onclick=()=>run(()=>persist());
 $('brief-form').onsubmit=async e=>{
  e.preventDefault();if(busy||confirming||!anna)return;
- const brief={topic:$('topic').value.trim(),audience:$('audience').value.trim(),count:Number($('count').value),theme:$('theme').value};if(!brief.topic)return;
+ const brief={topic:$('topic').value.trim(),audience:$('audience').value.trim(),count:Number($('count').value),theme:$('new-theme').value};if(!brief.topic)return;
  if(!await confirmAction(`将生成 ${brief.count} 页并创建独立项目，使用 Anna 额度。现有项目保留。`,{title:'生成 AI 演示',action:'生成新项目'}))return;
  run(async()=>{$('generation-status').textContent='AI 正在规划内容与版式…';await persist();const generated=await generateDeck(anna,brief);await newProject(generated);$('generation-status').textContent=`已生成 ${deck.slides.length} 页 · ${deck.usage?.totalTokens||'—'} tokens，请核对内容。`;});
 };
-$('demo').onclick=()=>run(()=>newProject(createDemo($('topic').value.trim()||'示例演示',$('audience').value.trim(),Number($('count').value),$('theme').value)));
+$('demo').onclick=()=>run(()=>newProject(createDemo($('topic').value.trim()||'示例演示',$('audience').value.trim(),Number($('count').value),$('new-theme').value)));
 $('theme').onchange=()=>{deck.theme=$('theme').value;renderPreview();markDirty();};
 $('layout').onchange=()=>{deck.slides[active].layout=$('layout').value;renderPreview();renderThumbnails();markDirty();};
 $('slide-title').oninput=()=>{deck.slides[active].title=$('slide-title').value;proposal=null;renderProposal();renderPreview();renderThumbnails();markDirty();};
@@ -99,8 +101,30 @@ async function boot(){
  render();try{
  if(hostMode){const {AnnaAppRuntime}=await import('/static/anna-apps/_sdk/latest/index.js');anna=await AnnaAppRuntime.connect();store=new ProjectStore(annaAdapter(anna));}else store=new ProjectStore(localAdapter(localStorage));
  await store.init(createDemo());const first=store.index.items.find(i=>!i.deleted);if(!first)throw Error('没有可用项目，请从回收站恢复。');projectId=first.id;deck=await store.open(projectId);syncBrief();
- $('connection-status').textContent=anna?'Anna 已连接 · 1.1 开发版':'本地预览 · 1.1 开发版';$('save-status').textContent='项目已恢复';
+ $('connection-status').textContent=anna?'Anna AI 已连接':'本地预览 · AI 未连接';$('save-status').textContent='项目已恢复';
  busy=false;render();
- }catch(e){$('connection-status').textContent='草稿加载失败，已停止写入';$('generation-status').textContent=friendlyError(e);}
+ }catch(e){$('connection-status').textContent='草稿加载失败，已停止写入';$('generation-status').textContent=friendlyError(e);toast(friendlyError(e));}
 }
+function selectPanel(name,focus=false){
+ for(const tab of document.querySelectorAll('[data-panel]')){const selected=tab.dataset.panel===name;tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;$('panel-'+tab.dataset.panel).hidden=!selected;if(selected&&focus)tab.focus();}
+}
+for(const tab of document.querySelectorAll('[data-panel]')){
+ tab.onclick=()=>{if(!busy)selectPanel(tab.dataset.panel);};
+ tab.onkeydown=e=>{if(busy)return;const names=['content','design','ai'];const index=names.indexOf(tab.dataset.panel);let target;if(e.key==='ArrowRight')target=(index+1)%3;else if(e.key==='ArrowLeft')target=(index+2)%3;else if(e.key==='Home')target=0;else if(e.key==='End')target=2;else return;e.preventDefault();selectPanel(names[target],true);};
+}
+function setCreateOpen(value){
+ const overlay=$('create-overlay');if(value===!overlay.hidden)return;
+ overlay.hidden=!value;$('app-header').inert=value;$('app-workspace').inert=value;
+ if(value){createReturnFocus=document.activeElement;$('topic').focus();}
+ else if(!busy){createReturnFocus?.focus();createReturnFocus=null;}
+}
+$('open-create').onclick=()=>{if(!busy)setCreateOpen(true);};
+$('close-create').onclick=()=>{if(!busy&&!confirming)setCreateOpen(false);};
+$('create-overlay').onclick=e=>{if(e.target===$('create-overlay')&&!busy&&!confirming)setCreateOpen(false);};
+$('create-overlay').addEventListener('keydown',e=>{
+ if(confirming)return;
+ if(e.key==='Escape'&&!busy){e.preventDefault();setCreateOpen(false);}
+ if(e.key==='Tab'){const controls=[...$('create-overlay').querySelectorAll('button,input,textarea,select')].filter(el=>!el.disabled);if(!controls.length)return;const first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
+});
+selectPanel('content');
 boot();
