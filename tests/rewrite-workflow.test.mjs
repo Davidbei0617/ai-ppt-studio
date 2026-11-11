@@ -1,0 +1,27 @@
+import {Window} from 'happy-dom';
+import {readFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const original={title:'考前冲刺与心态调整',layout:'process',bullets:['考前3天：回归基础，不再钻研偏题怪题','考前1天：浏览错题本与核心公式清单'],notes:'原演讲备注'};
+const deck={schema:1,title:'备考指南',theme:'paper',audience:'大学生',slides:[structuredClone(original),{title:'另一页',layout:'summary',bullets:['保持正常作息'],notes:''}]};
+const values=new Map([['decks/current',{value:deck,etag:'old'}]]);let calls=0,nextPage;
+globalThis.__rewriteTestAnna={storage:{get:async({key})=>values.has(key)?{exists:true,...structuredClone(values.get(key))}:{exists:false,value:null},set:async({key,value,if_match})=>{if(if_match)assert.equal(if_match,values.get(key)?.etag);const result={etag:crypto.randomUUID()};values.set(key,{value:structuredClone(value),...result});return result;}},llm:{complete:async()=>{calls++;return {stopReason:'endTurn',content:{text:JSON.stringify(nextPage)}};}}};
+const win=new Window({url:'http://localhost:5181/app?wid=mock-window',settings:{disableJavaScriptFileLoading:true,disableCSSFileLoading:true}});
+win.document.write((await readFile('bundle/index.html','utf8')).replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,'').replace(/<link\b[^>]*>/g,''));
+Object.assign(globalThis,{window:win,document:win.document,location:win.location,localStorage:win.localStorage});
+let code=await readFile('bundle/app.js','utf8');
+code=code.replace(/from '\.\/([^']+)'/g,(_,file)=>`from '${new URL('../bundle/'+file,import.meta.url).href}'`);
+const sdk='data:text/javascript,'+encodeURIComponent('export class AnnaAppRuntime {static async connect(){return globalThis.__rewriteTestAnna;}}');
+code=code.replace("'/static/anna-apps/_sdk/latest/index.js'",JSON.stringify(sdk));
+const $=id=>document.getElementById(id),tick=()=>new Promise(r=>setTimeout(r,30));
+await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));await tick();
+assert.equal($('connection-status').textContent,'Anna AI 已连接');$('tab-ai').click();
+async function request(page){nextPage=page;document.querySelector('[data-rewrite="shorten"]').click();await tick();document.querySelector('.confirm-accept').click();await tick();}
+await request({...original,title:'考前复习安排',bullets:['提前3天巩固基础','前一天复盘错题'],notes:'更清晰的讲述提示'});
+assert.equal(calls,1);assert.equal($('preview-title').textContent,original.title);assert.equal($('rewrite-review').hidden,false);assert.match($('rewrite-diff').textContent,/2 处要点/);assert.equal(document.querySelectorAll('.changed-line').length,2);
+$('accept-rewrite').click();await tick();assert.equal($('preview-title').textContent,'考前复习安排');assert.match($('rewrite-status').textContent,/并保存/);
+let saved=[...values.entries()].find(([k])=>k.startsWith('projects/')&&k!=='projects/index-v2')[1].value;assert.equal(saved.slides[0].title,'考前复习安排');assert.equal(saved.slides[1].title,'另一页');
+$('undo').click();$('save-now').click();await tick();assert.equal($('preview-title').textContent,original.title);
+await request(original);assert.equal(calls,2);assert.equal($('rewrite-review').hidden,true);assert.match($('rewrite-status').textContent,/没有产生修改/);
+await request({...original,notes:'仅备注更新'});assert.equal(calls,3);assert.equal($('rewrite-review').hidden,false);assert.match($('rewrite-candidate-label').textContent,/仅演讲备注/);$('reject-rewrite').click();assert.equal($('preview-title').textContent,original.title);
+console.log('Anna 接口模拟的完整改写流程通过：真实按钮触发、候选不覆盖、采用后保存、其他页不变、撤销、无变化识别与仅备注提示。');
+$('save-now').click();await tick();await win.happyDOM.close();

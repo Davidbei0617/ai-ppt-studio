@@ -1,6 +1,6 @@
 import {exportPresentation,friendlyExportError} from './export.js';
 import {askConfirmation} from './confirmation.js';
-import {generateDeck,rewriteSlide,friendlyError} from './ai.js';
+import {generateDeck,rewriteSlide,friendlyError,compareRewrite} from './ai.js';
 import {ProjectStore,localAdapter,annaAdapter,LAYOUTS,slideLayout} from './projects.js';
 const $=id=>document.getElementById(id),hostMode=new URLSearchParams(location.search).has('wid');
 let anna=null,store=null,projectId=null,active=0,busy=true,confirming=false,dirty=false,editVersion=0,saveTimer,toastTimer,saveQueue=Promise.resolve(),proposal=null,undo=null;
@@ -40,7 +40,21 @@ function renderThumbnails(){
 }
 function renderProposal(){
  $('rewrite-review').hidden=!proposal;
- if(proposal){$('rewrite-preview-title').textContent=proposal.page.title;$('rewrite-preview-body').textContent=proposal.page.bullets.join('\n');$('rewrite-preview-notes').textContent=proposal.page.notes;}
+ if(!proposal)return;
+ const original=JSON.parse(proposal.original),diff=compareRewrite(original,proposal.page);
+ $('rewrite-preview-title').textContent=proposal.page.title;
+ $('rewrite-preview-title').classList.toggle('changed-title',diff.titleChanged);
+ $('rewrite-preview-body').replaceChildren(...proposal.page.bullets.map((text,i)=>{const line=document.createElement('span');line.className='rewrite-line'+(diff.bulletChanges[i]?' changed-line':'');line.textContent=text;return line;}));
+ $('rewrite-preview-notes').textContent=proposal.page.notes;
+ $('rewrite-original-title').textContent=original.title;
+ $('rewrite-original-body').textContent=original.bullets.join('\n');
+ const parts=[];
+ if(diff.titleChanged)parts.push('标题已调整');
+ const count=diff.bulletChanges.filter(Boolean).length;
+ if(count)parts.push(`${count} 处要点变化 · ${diff.beforeLength} → ${diff.afterLength} 字`);
+ if(diff.notesChanged)parts.push('演讲备注已调整');
+ $('rewrite-diff').textContent=parts.join('；');
+ $('rewrite-candidate-label').textContent=diff.visibleChanged?'改写候选 · 高亮处为变化内容':'仅演讲备注有变化 · 幻灯片正文不变';
 }
 function render(){
  renderPreview();renderThumbnails();renderProposal();
@@ -89,9 +103,30 @@ $('move-left').onclick=()=>move(-1);$('move-right').onclick=()=>move(1);
 for(const button of document.querySelectorAll('[data-rewrite]'))button.onclick=async()=>{
  if(busy||!anna)return;
  if(!await confirmAction('仅改写当前页，使用少量 Anna 额度。结果先预览，确认采用后才替换原页。',{title:button.textContent,action:'开始改写'}))return;
- run(async()=>{$('rewrite-status').textContent='正在改写当前页…';const original=JSON.stringify(deck.slides[active]);const page=await rewriteSlide(anna,{slide:structuredClone(deck.slides[active]),topic:deck.topic||deck.title,audience:deck.audience,action:button.dataset.rewrite});proposal={page,original,index:active,projectId};$('rewrite-status').textContent='候选内容已就绪，请核对后采用。';renderProposal();});
+ run(async()=>{
+  $('rewrite-status').textContent='正在改写当前页…';proposal=null;renderProposal();
+  const original=JSON.stringify(deck.slides[active]);
+  let page;
+  try{page=await rewriteSlide(anna,{slide:structuredClone(deck.slides[active]),topic:deck.topic||deck.title,audience:deck.audience,action:button.dataset.rewrite});}
+  catch(error){$('rewrite-status').textContent='改写失败：'+friendlyError(error);throw error;}
+  const diff=compareRewrite(JSON.parse(original),page);
+  if(!diff.changed){$('rewrite-status').textContent='AI 返回的内容与原页相同，没有产生修改。原页已保留，本次请求可能已消耗额度，不会自动重试。';return;}
+  proposal={page,original,index:active,projectId};
+  $('rewrite-status').textContent=diff.visibleChanged?'候选已就绪。原页尚未改变，点击“采用并保存”后更新预览。':'AI 仅改写了演讲备注，正文没有变化。请展开备注检查后再决定是否采用。';
+  renderProposal();
+ });
 };
-$('accept-rewrite').onclick=()=>change(()=>{if(!proposal||proposal.projectId!==projectId||proposal.index!==active||proposal.original!==JSON.stringify(deck.slides[active])){toast('原页面已变更，请重新改写。');return;}undo={type:'rewrite',index:active,page:structuredClone(deck.slides[active]),after:JSON.stringify(proposal.page)};deck.slides[active]=proposal.page;$('rewrite-status').textContent='已采用，可撤销。';});
+$('accept-rewrite').onclick=()=>{
+ if(busy||!proposal)return;
+ if(proposal.projectId!==projectId||proposal.index!==active||proposal.original!==JSON.stringify(deck.slides[active])){proposal=null;renderProposal();toast('原页面已变更，请重新改写。');return;}
+ const chosen=proposal;
+ run(async()=>{
+  undo={type:'rewrite',index:active,page:structuredClone(deck.slides[active]),after:JSON.stringify(chosen.page)};
+  deck.slides[active]=chosen.page;proposal=null;markDirty();render();
+  try{await persist();$('rewrite-status').textContent='改写已应用到当前页并保存，可点击下方“撤销”恢复。';toast('当前页已更新并保存。');}
+  catch(error){$('rewrite-status').textContent='页面已更新，但保存失败。请立即备份或重试保存。';throw error;}
+ });
+};
 $('reject-rewrite').onclick=()=>{proposal=null;renderProposal();$('rewrite-status').textContent='已保留原页。';};
 $('backup').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(deck,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='演示草稿.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};
 $('export-pptx').onclick=()=>run(async()=>{if(!globalThis.PptxGenJS)throw Error('导出组件未加载，请刷新。');try{await persist();await exportPresentation({Pptx:globalThis.PptxGenJS,deck:structuredClone(deck),anna,localDownload:['localhost','127.0.0.1','[::1]'].includes(location.hostname),onProgress:message=>$('export-status').textContent=message});$('export-status').textContent='已发起 PPTX 下载，请查看浏览器下载列表。';}catch(e){$('export-status').textContent='导出失败：'+friendlyExportError(e);}});
