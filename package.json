@@ -1,0 +1,23 @@
+{
+  "devDependencies": {
+    "@anna-ai/cli": "^0.1.64"
+  },
+  "name": "ai-ppt-studio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "anna": "anna-app",
+    "dev": "anna-app dev",
+    "validate": "anna-app validate --strict",
+    "preview": "node scripts/preview.cjs",
+    "dev:anna": "node scripts/dev.cjs",
+    "test": "node tests/ai.test.mjs && node tests/confirmation.test.mjs && node tests/export.test.mjs",
+    "build": "node scripts/sync-vendor.cjs"
+  },
+  "dependencies": {
+    "pptxgenjs": "4.0.0"
+  },
+  "overrides": {
+    "image-size": "2.1.0"
+  }
+}

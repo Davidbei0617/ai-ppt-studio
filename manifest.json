@@ -1,0 +1,41 @@
+{
+  "schema": 4,
+  "required_executas": [],
+  "tags": [
+    "presentations",
+    "productivity"
+  ],
+  "ui": {
+    "bundle": {
+      "format": "static-spa",
+      "entry": "index.html",
+      "external_origins": [
+        "https://5244841125c1e42784f5bda924751be6.r2.cloudflarestorage.com"
+      ]
+    },
+    "views": [
+      {
+        "name": "main",
+        "title": "叙页 · AI PPT Studio",
+        "default": true,
+        "default_size": {
+          "w": 1280,
+          "h": 820
+        },
+        "min_size": {
+          "w": 360,
+          "h": 600
+        }
+      }
+    ],
+    "csp_overrides": {},
+    "state_merge": "last_writer_wins"
+  },
+  "dev": {
+    "fixtures": [
+      "fixtures/*.jsonl"
+    ],
+    "seed_storage": {},
+    "user_id": 1
+  }
+}
