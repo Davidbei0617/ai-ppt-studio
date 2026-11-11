@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const source=await readFile(new URL('../bundle/ai.js',import.meta.url),'utf8');
-const {generateDeck,parseReply,buildRequest,friendlyError}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const {generateDeck,parseReply,buildRequest,friendlyError}=await import('../bundle/ai.js');
 const brief={topic:'校园旧物交换',audience:'大学生',count:4,theme:'ink'};
 function response(){return {content:{type:'text',text:JSON.stringify({title:'校园旧物交换',slides:Array.from({length:4},(_,i)=>({title:'第'+(i+1)+'页',bullets:['具体观点','可执行行动'],notes:'讲述提示'}))})},stopReason:'endTurn',usage:{totalTokens:240}};}
 test('生成流程通过 Anna 接口且不自动重复请求',async()=>{

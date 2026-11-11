@@ -1,9 +1,10 @@
 {
   "devDependencies": {
-    "@anna-ai/cli": "^0.1.64"
+    "@anna-ai/cli": "^0.1.64",
+    "happy-dom": "^21.0.4"
   },
   "name": "ai-ppt-studio",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "anna": "anna-app",
@@ -11,7 +12,7 @@
     "validate": "anna-app validate --strict",
     "preview": "node scripts/preview.cjs",
     "dev:anna": "node scripts/dev.cjs",
-    "test": "node tests/ai.test.mjs && node tests/confirmation.test.mjs && node tests/export.test.mjs",
+    "test": "node tests/ai.test.mjs && node tests/confirmation.test.mjs && node tests/export.test.mjs && node tests/projects.test.mjs && node tests/rewrite.test.mjs && node tests/layouts.test.mjs && node tests/workspace.test.mjs",
     "build": "node scripts/sync-vendor.cjs"
   },
   "dependencies": {
@@ -19,5 +20,6 @@
   },
   "overrides": {
     "image-size": "2.1.0"
-  }
+  },
+  "type": "module"
 }

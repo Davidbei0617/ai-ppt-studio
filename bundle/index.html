@@ -11,24 +11,24 @@
 <header class="topbar"><a class="brand" href="./"><span class="mark">叙</span><span>叙页 <small>PPT STUDIO</small></span></a><span class="badge" id="connection-status">正在检查 Anna 连接…</span><div class="export-actions"><button id="backup">备份草稿</button><button id="export-pptx" class="export-primary">导出 PPTX ↓</button></div></header>
 <main class="workspace">
   <aside class="brief panel">
-    <div class="eyebrow">01 / 从一个想法开始</div><h1>让想法，<br>成为一场好演示。</h1><p class="muted">填写主题与受众，让 AI 梳理故事，再逐页打磨表达。</p>
+    <section class="project-panel"><div class="project-heading"><strong>我的项目</strong><span id="project-count"></span></div><select id="project-select" aria-label="选择项目"></select><div class="project-buttons"><button id="new-project">＋ 新建</button><button id="clone-project">复制</button><button id="archive-project">移入回收站</button></div><label class="trash-toggle"><input type="checkbox" id="show-trash"> 查看回收站</label><button id="restore-project" hidden>恢复所选项目</button><label for="project-name">项目名称</label><input id="project-name" maxlength="100"><button id="save-now">立即保存 / 重试</button></section><div class="eyebrow">01 / 从一个想法开始</div><h1>让想法，<br>成为一场好演示。</h1><p class="muted">填写主题与受众，让 AI 梳理故事，再逐页打磨表达。</p>
     <form id="brief-form">
       <label for="topic">演示主题</label><textarea id="topic" rows="3" maxlength="100" required>让团队更高效地使用 AI</textarea>
       <label for="audience">面向谁讲述</label><input id="audience" maxlength="60" value="团队成员">
       <div class="form-row"><div><label for="count">页数</label><select id="count"><option>4</option><option selected>6</option><option>8</option></select></div><div><label for="theme">视觉主题</label><select id="theme"><option value="ink">午夜蓝</option><option value="paper">暖纸白</option><option value="forest">森林绿</option></select></div></div>
-      <button class="primary" id="generate" type="submit" disabled>连接 Anna 后生成 <span>↗</span></button><button id="demo" type="button" style="margin-top:10px;width:100%">创建免费示例</button><p id="generation-status" class="hint" role="status" aria-live="polite"></p>
-      <p class="hint">AI 生成会使用你的 Anna 额度；失败时保留当前草稿，不自动重试。</p>
+      <button class="primary" id="generate" type="submit" disabled>连接 Anna 后生成 <span>↗</span></button><button id="demo" type="button" style="margin-top:10px;width:100%">新建免费示例项目</button><p id="generation-status" class="hint" role="status" aria-live="polite"></p>
+      <p class="hint">AI 生成会使用你的 Anna 额度；现有项目始终保留，不自动重试。</p>
     </form>
     <div class="brief-footer"><span class="dot"></span><span id="save-status" role="status">本地草稿</span></div>
   </aside>
   <section class="editor">
     <div class="editor-heading"><div><div class="eyebrow">02 / 打磨你的故事</div><h2 id="deck-title"></h2></div><div class="counter" id="page-counter"></div></div>
     <div class="canvas-wrap"><article class="slide" id="slide" aria-label="当前幻灯片预览"><div class="slide-top"><span id="slide-kicker"></span><span>叙页 / STUDIO</span></div><div class="slide-content"><h3 id="preview-title"></h3><ul id="preview-bullets"></ul></div><div class="slide-bottom"><span id="preview-audience"></span><span id="preview-page"></span></div></article></div>
-    <div class="slide-toolbar"><span>16:9 · 文字可编辑</span><div><button id="move-left" aria-label="当前页前移">← 前移</button><button id="move-right" aria-label="当前页后移">后移 →</button><button id="duplicate">复制页</button><button id="delete">删除页</button><button id="undo" disabled>撤销删除</button></div></div>
+    <div class="slide-toolbar"><span>16:9 · 文字可编辑</span><div><button id="move-left" aria-label="当前页前移">← 前移</button><button id="move-right" aria-label="当前页后移">后移 →</button><button id="duplicate">复制页</button><button id="delete">删除页</button><button id="undo" disabled>撤销操作</button></div></div>
     <nav id="thumbnails" class="thumbnails" aria-label="幻灯片列表"></nav>
     <button id="add" class="add-button">＋ 添加一页</button>
   </section>
-  <aside class="inspector panel"><div class="eyebrow">03 / 内容编辑</div><h2>每一页，都更清晰</h2><label for="slide-title">页面标题</label><input id="slide-title" maxlength="64"><label for="bullets">内容要点 <small>每行一条，最多 4 条</small></label><textarea id="bullets" rows="8"></textarea><p class="hint">每条最多 60 字，适合演示时阅读。</p><label for="notes">演讲备注</label><textarea id="notes" rows="5" maxlength="2000" placeholder="写下讲述这一页时的提示…"></textarea><p class="hint">备注不显示在幻灯片上。</p><div class="tip"><strong>一个观点，一张幻灯片</strong><p>用短句表达重点，把详细解释留给讲述。</p></div></aside>
+  <aside class="inspector panel"><div class="eyebrow">03 / 内容编辑</div><h2>每一页，都更清晰</h2><label for="layout">页面版式</label><select id="layout"><option value="cover">封面</option><option value="content">内容</option><option value="compare">双栏对比</option><option value="process">步骤流程</option><option value="summary">总结</option></select><label for="slide-title">页面标题</label><input id="slide-title" maxlength="64"><label for="bullets">内容要点 <small>每行一条，最多 4 条</small></label><textarea id="bullets" rows="8"></textarea><p class="hint">每条最多 60 字，适合演示时阅读。</p><label for="notes">演讲备注</label><textarea id="notes" rows="5" maxlength="2000" placeholder="写下讲述这一页时的提示…"></textarea><p class="hint">备注不显示在幻灯片上。</p><section class="rewrite-panel"><label>用 AI 打磨当前页</label><div class="rewrite-buttons"><button data-rewrite="shorten">精简本页</button><button data-rewrite="professional">专业表达</button><button data-rewrite="example">补充案例</button></div><p class="hint" id="rewrite-status" role="status">只处理当前页，候选内容需确认后采用。</p><div id="rewrite-review" hidden><strong id="rewrite-preview-title"></strong><p id="rewrite-preview-body"></p><p id="rewrite-preview-notes" class="hint"></p><button id="accept-rewrite">采用改写</button><button id="reject-rewrite">保留原页</button></div></section><div class="tip"><strong>一个观点，一张幻灯片</strong><p>用短句表达重点，把详细解释留给讲述。</p></div></aside>
 </main>
 <footer class="page-footer">叙页 · 从内容到表达 <span>主题生成 → 编辑与保存 → 导出 PPTX</span></footer>
 <p id="export-status" class="export-status" role="status" aria-live="polite"></p>

@@ -4,7 +4,7 @@ import {createRequire} from 'node:module';
 import vm from 'node:vm';
 const require=createRequire(import.meta.url);const JSZip=require('jszip');globalThis.JSZip=JSZip;
 const code=await readFile(new URL('../bundle/export.js',import.meta.url),'utf8');
-const {buildPresentation,createPptxBytes,exportPresentation,safeFilename}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+const {buildPresentation,createPptxBytes,exportPresentation,safeFilename}=await import('../bundle/export.js');
 // Exercise the exact vendored browser library rather than only its Node entry.
 const context={console,setTimeout,clearTimeout,Uint8Array,ArrayBuffer,Blob,TextEncoder,TextDecoder};context.window=context;context.self=context;
 vm.createContext(context);vm.runInContext(await readFile(new URL('../bundle/vendor/pptxgen.bundle.js',import.meta.url),'utf8'),context);

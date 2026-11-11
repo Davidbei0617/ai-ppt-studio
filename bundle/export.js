@@ -1,3 +1,4 @@
+import {slideLayout} from './projects.js';
 export const PPTX_MIME='application/vnd.openxmlformats-officedocument.presentationml.presentation';
 const palettes={ink:{bg:'102640',fg:'F2F5FC',muted:'8FA8C9',line:'2F4965'},paper:{bg:'F8F2E7',fg:'443C32',muted:'997C55',line:'D2C2AA'},forest:{bg:'173E35',fg:'F2F8ED',muted:'A7C99C',line:'3F6A57'}};
 export function safeFilename(title){return (String(title||'演示文稿').replace(/[<>:"/\\|?*\x00-\x1f]/g,'_').replace(/[. ]+$/,'').slice(0,80)||'演示文稿')+'.pptx';}
@@ -11,13 +12,33 @@ export function buildPresentation(Pptx,deck){
     slide.addText((deck.source==='ai'?'AI 演示':'演示文稿')+' / '+String(index+1).padStart(2,'0'),{...base,x:0.8,y:0.48,w:8,h:0.25,fontSize:10,color:p.muted});
     slide.addText('叙页 / STUDIO',{...base,x:10.25,y:0.48,w:2.25,h:0.25,fontSize:10,color:p.muted,align:'right'});
     slide.addShape(pptx.ShapeType.line,{x:0.8,y:0.95,w:11.7,h:0,line:{color:p.line,width:1}});
-    slide.addText(page.title||'未命名页面',{...base,x:0.8,y:1.4,w:11.7,h:1.35,fontSize:page.title?.length>36?28:34,bold:true,valign:'mid',fit:'shrink'});
-    const bullets=page.bullets.filter(Boolean);
-    bullets.forEach((text,i)=>{
-      const y=3.0+i*0.76;
-      slide.addShape(pptx.ShapeType.ellipse,{x:0.84,y:y+0.19,w:0.065,h:0.065,line:{color:p.muted,transparency:100},fill:{color:p.muted}});
-      slide.addText(text,{...base,x:1.08,y,w:11.3,h:0.7,fontSize:21,valign:'mid',fit:'shrink',paraSpaceAfterPt:0});
-    });
+    const layout=slideLayout(page),bullets=page.bullets.filter(Boolean);
+    const titleY=layout==='cover'?1.7:1.35;
+    slide.addText(page.title||'未命名页面',{...base,x:0.8,y:titleY,w:11.7,h:1.35,fontSize:layout==='cover'?42:page.title?.length>36?28:34,bold:true,valign:'mid',fit:'shrink'});
+    if(layout==='compare'){
+      bullets.forEach((text,i)=>{const x=0.85+(i%2)*6.0,y=3.1+Math.floor(i/2)*1.25;
+        slide.addShape(pptx.ShapeType.line,{x,y,w:5.45,h:0,line:{color:p.line,width:1}});
+        slide.addText(text,{...base,x,y:y+0.18,w:5.45,h:0.9,fontSize:22,fit:'shrink',valign:'mid'});
+      });
+    }else if(layout==='process'){
+      const width=11.7/Math.max(bullets.length,1);
+      bullets.forEach((text,i)=>{const x=0.85+i*width;
+        slide.addText(String(i+1).padStart(2,'0'),{...base,x,y:3.0,w:width-0.25,h:0.55,fontSize:30,bold:true,color:p.muted});
+        slide.addText(text,{...base,x,y:3.8,w:width-0.35,h:2.0,fontSize:22,fit:'shrink',valign:'top'});
+      });
+    }else if(layout==='summary'){
+      bullets.forEach((text,i)=>{const y=3.0+i*0.76;
+        slide.addText(String(i+1).padStart(2,'0'),{...base,x:0.85,y,w:0.65,h:0.65,fontSize:26,color:p.muted,bold:true});
+        slide.addText(text,{...base,x:1.65,y,w:10.8,h:0.7,fontSize:21,fit:'shrink',valign:'mid'});
+      });
+    }else if(layout==='cover'){
+      bullets.forEach((text,i)=>slide.addText(text,{...base,x:0.85,y:3.35+i*0.58,w:11.6,h:0.52,fontSize:20,color:p.muted,fit:'shrink',valign:'mid'}));
+    }else{
+      bullets.forEach((text,i)=>{const y=3.0+i*0.76;
+        slide.addShape(pptx.ShapeType.ellipse,{x:0.84,y:y+0.19,w:0.065,h:0.065,line:{color:p.muted,transparency:100},fill:{color:p.muted}});
+        slide.addText(text,{...base,x:1.08,y,w:11.3,h:0.7,fontSize:21,valign:'mid',fit:'shrink'});
+      });
+    }
     slide.addText(deck.audience||'面向所有听众',{...base,x:0.8,y:6.85,w:10,h:0.22,fontSize:10,color:p.muted});
     slide.addText(`${index+1} / ${deck.slides.length}`,{...base,x:11.1,y:6.85,w:1.4,h:0.22,fontSize:10,color:p.muted,align:'right'});
     slide.addNotes(page.notes||'');

@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {ProjectStore,localAdapter} from '../bundle/projects.js';
+const memory=new Map();const storage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
+const original={schema:1,title:'旧版草稿',theme:'ink',audience:'大学生',slides:[{title:'保留原文',bullets:['要点'],notes:'原备注'}]};
+storage.setItem('xuye-preview-deck-v1',JSON.stringify(original));
+const store=new ProjectStore(localAdapter(storage));await store.init(original);
+const first=store.index.items[0].id;assert.deepEqual(await store.open(first),original);assert.equal(storage.getItem('xuye-preview-deck-v1'),JSON.stringify(original));
+const second=await store.create({...original,title:'独立项目'});const edited=await store.open(second);edited.slides[0].title='只改第二个项目';await store.save(second,edited);
+assert.equal((await store.open(first)).slides[0].title,'保留原文');assert.equal((await store.open(second)).slides[0].title,'只改第二个项目');
+await store.archive(second);await assert.rejects(store.open(second),/回收站/);await store.archive(second,false);assert.equal((await store.open(second)).title,'独立项目');
+const other=new ProjectStore(localAdapter(storage));await other.init(original);const stale=await other.open(first);const current=await store.open(first);current.title='另一个窗口已保存';await store.save(first,current);stale.title='过期内容';await assert.rejects(other.save(first,stale),/其他窗口/);
+const reloaded=new ProjectStore(localAdapter(storage));await reloaded.init(original);assert.equal(reloaded.index.items.length,2);assert.equal((await reloaded.open(first)).title,'另一个窗口已保存');
+console.log('旧草稿迁移、独立项目保存、回收站恢复、刷新恢复、过期写入保护检查通过。');
