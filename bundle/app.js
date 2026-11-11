@@ -97,7 +97,7 @@ $('close-trash').onclick=$('done-trash').onclick=()=>{if(!busy)setTrashOpen(fals
 $('trash-overlay').onclick=e=>{if(e.target===$('trash-overlay')&&!busy)setTrashOpen(false);};
 $('new-project').onclick=()=>run(()=>newProject({schema:1,title:'未命名项目',audience:'',theme:$('new-theme').value,slides:[{title:'演示标题',bullets:['在这里写下你的想法'],notes:'',layout:'cover'}]}));
 $('clone-project').onclick=()=>run(async()=>{await newProject({...structuredClone(deck),title:(deck.title+' · 副本').slice(0,100)});toast('已复制项目。');});
-$('archive-project').onclick=async()=>{if(busy)return;if(!await confirmAction('项目将移入回收站，可以恢复。',{title:'移入回收站',action:'移入回收站'}))return;run(async()=>{await persist();await store.archive(projectId);let next=store.index.items.find(i=>!i.deleted);if(!next){const id=await store.create(createDemo());next={id};}await openProject(next.id);toast('项目已移入回收站。');});};
+$('archive-project').onclick=async()=>{if(busy)return;if(!await confirmAction('删除后项目会移入回收站，随时可以恢复。',{title:'删除当前项目？',action:'删除项目'}))return;run(async()=>{await persist();await store.archive(projectId);let next=store.index.items.find(i=>!i.deleted);if(!next){const id=await store.create(createDemo());next={id};}await openProject(next.id);toast('项目已删除，可在回收站恢复。');});};
 $('project-name').onchange=()=>{const value=$('project-name').value.trim();if(!value){$('project-name').value=deck.title;return;}deck.title=value;renderPreview();markDirty();};
 $('save-now').onclick=()=>run(()=>persist());
 $('brief-form').onsubmit=async e=>{

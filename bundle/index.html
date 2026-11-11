@@ -14,16 +14,13 @@
   <div class="header-actions"><span id="connection-status" class="connection-status">正在连接…</span><button id="export-pptx" class="primary-button">导出 PPTX <span aria-hidden="true">↓</span></button></div>
 </header>
 <main class="workspace" id="app-workspace">
-  <aside class="sidebar" aria-label="项目和幻灯片">
+  <aside class="sidebar" aria-label="项目管理">
     <div class="project-navigation">
       <button id="open-create" class="create-button"><span aria-hidden="true">＋</span> 新建演示</button>
       <div class="section-label"><label for="project-select">我的项目</label><span id="project-count"></span></div>
       <select id="project-select" aria-label="切换项目"></select>
-      <details class="project-menu"><summary>项目管理 <span aria-hidden="true">⌄</span></summary><div class="project-menu-content"><button id="clone-project">复制当前项目</button><button id="backup">下载 JSON 备份</button><button id="save-now">立即保存 / 重试保存</button><button id="archive-project" class="danger-text">将当前项目移入回收站</button></div></details>
+      <section class="project-tools" aria-labelledby="project-tools-title"><h2 id="project-tools-title">项目管理</h2><div class="project-menu-content"><button id="clone-project">复制当前项目</button><button id="backup">下载 JSON 备份</button><button id="save-now">立即保存 / 重试保存</button><button id="archive-project" class="danger-text">删除当前项目</button></div></section>
     </div>
-    <div class="slides-heading"><h2>幻灯片</h2><span class="microcopy">点击页面开始编辑</span></div>
-    <nav id="thumbnails" class="thumbnails" aria-label="幻灯片列表"></nav>
-    <button id="add" class="add-button">＋ 添加幻灯片</button>
     <button id="open-trash" class="trash-entry"><span>回收站</span><span id="trash-count" class="trash-count">0</span></button><div class="sidebar-footer">每个项目独立保存</div>
   </aside>
   <section class="editor" aria-label="演示预览">
@@ -31,6 +28,7 @@
     <div class="canvas-area"><div class="canvas-wrap"><article class="slide" id="slide" aria-label="当前幻灯片预览"><div class="slide-top"><span id="slide-kicker"></span><span>叙页 / STUDIO</span></div><div class="slide-content"><h3 id="preview-title"></h3><ul id="preview-bullets"></ul></div><div class="slide-bottom"><span id="preview-audience"></span><span id="preview-page"></span></div></article></div></div>
     <div class="slide-toolbar"><div class="page-position"><span id="page-counter"></span><span class="toolbar-separator"></span><span>在右侧编辑，预览即时更新</span></div><div class="page-actions"><button id="move-left" aria-label="当前页前移" title="前移一页">←</button><button id="move-right" aria-label="当前页后移" title="后移一页">→</button><button id="duplicate">复制页</button><button id="undo" disabled>撤销</button><details class="page-menu"><summary aria-label="更多页面操作">•••</summary><div><button id="delete" class="danger-text">删除当前页</button></div></details></div></div>
     <p id="export-status" class="export-status" role="status" aria-live="polite"></p>
+    <section class="slide-filmstrip" aria-label="幻灯片缩略预览"><div class="filmstrip-heading"><div><h2>幻灯片预览</h2><span>点击缩略图切换页面</span></div><button id="add" class="add-button">＋ 添加幻灯片</button></div><nav id="thumbnails" class="thumbnails" aria-label="幻灯片列表"></nav></section>
     <div class="editor-footer"><span>先讲清观点，再打磨表达</span><span>叙页工作台 · 1.1</span></div>
   </section>
   <aside class="inspector" aria-label="当前页设置">
